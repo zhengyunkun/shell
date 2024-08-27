@@ -1,15 +1,13 @@
 # A Simple Shell in C
 
-## Install
+## Install the shell
 
 ```bash
 cd /shell
 make
 ```
 
-### Then the shell progarm has been compiled into shell
-
-Type ./shell to run shell C program in your command line.
+### Use the shell
 
 ```bash
 ./shell
@@ -17,3 +15,6 @@ Type ./shell to run shell C program in your command line.
 
 ### Enter the shell like
 
+![icon](src/shell.png)
+
+### More updates will follow...

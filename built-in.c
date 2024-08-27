@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <linux/limits.h>
+#include <time.h>
 
 // List of built-in commands
 char* builtin_str[] = {
