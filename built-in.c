@@ -89,7 +89,7 @@ void print_file_info(const char* name, const struct stat* st) {
     printf((st->st_mode & S_IXOTH) ? "x" : "-");
 
     // (3) Print link count of the file
-    printf(" %2ld", st->st_nlink);
+    printf(" %4ld", st->st_nlink);
 
     // (4) Print file owner and group
     struct passwd *pw = getpwuid(st->st_uid);
@@ -112,12 +112,6 @@ void print_file_info(const char* name, const struct stat* st) {
 // supporting "-a" and "-l" options
 int ksh_ls(char** args)
 {
-    if (args[1] == NULL) 
-    {
-        fprintf(stderr, "ksh: missing directory argument\n");
-        exit(EXIT_FAILURE);
-    }
-
     const char* dir_path = ".";
     // Default directory is the current directory "."
     int show_all = 0;
@@ -600,12 +594,36 @@ int ksh_chmod(char** args)
 // 13. help command 
 int ksh_help(char** args)
 {
-    printf("Zheng Yunkun's Fisrt Shell, ksh\n");
-    printf("Type program names and arguments, and hit enter to execute.\n");
-    printf("The following are built-in commands:\n");
-    for (int i = 1; i <= ksh_num_builtins(); i ++) printf("(%d)  %s\n", i, builtin_str[i - 1]);
+    char cwd[PATH_MAX];                 // cwd is the current working directory
+    char* username = getenv("USER");    // get the username from the environment variable
+    if (getcwd(cwd, sizeof(cwd)) == NULL) perror("ksh: getcwd failed...\n");
 
-    printf("Use the \'man\' command for information on other programs.\n");
+    printf("**********************************************************************\n");
+    printf("*                                                                    *\n");
+    printf("*                Welcome to Zheng Yunkun's First Shell!              *\n");
+    printf("*                                ksh                                 *\n");
+    printf("*                                                                    *\n");
+    printf("**********************************************************************\n\n");
+    printf("Type program names and arguments, and hit enter to execute.\n");
+    printf("The following are built-in commands:\n\n");
+
+    for (int i = 1; i <= ksh_num_builtins(); i++) printf("  (%d)%s  \033[0;31m%-20s\033[0m\n", i, (i < 10) ? " " : "", builtin_str[i - 1]);
+
+    printf("\nUse the 'man' command for information on other programs.\n");
+    printf("\nExamples:\n");
+    printf("  \033[35m%s\033[0m in \033[32m%s\033[0m \033[33mλ\033[0m ls -l\n", username, cwd);
+    printf("  \033[35m%s\033[0m in \033[32m%s\033[0m \033[33mλ\033[0m cd /home/user\n", username, cwd);
+    printf("  \033[35m%s\033[0m in \033[32m%s\033[0m \033[33mλ\033[0m echo \"Hello, World!\"\n", username, cwd);
+
+    printf("\nTips:\n");
+    printf("  - Use 'cd' to change directories.\n");
+    printf("  - Use 'exit' to quit the shell.\n");
+    printf("  - Use 'help' to see this message again.\n");
+
+    printf("\n**********************************************************************\n");
+    printf("*                              Bye-bye                               *\n");
+    printf("**********************************************************************\n");
+
     return 1;
 }
 
