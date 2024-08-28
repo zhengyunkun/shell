@@ -349,15 +349,15 @@ int remove_directory(const char* path, int force, int verbose, int interactive)
             {
                 struct stat statbuf;
                 // stat struct is used to store the information of the file like:
-                // (1) st_dev: ID of device containing file
-                // (2) st_ino: inode number
-                // (3) st_mode: protection
-                // (4) st_nlink: number of hard links
-                // (5) st_uid: user ID of owner
-                // (6) st_gid: group ID of owner
-                // (7) st_size: total size, in bytes
-                // (8) st_blksize: blocksize for file system I/O
-                // (9) st_blocks: number of 512B blocks allocated
+                // (1)  st_dev: ID of device containing file
+                // (2)  st_ino: inode number
+                // (3)  st_mode: protection
+                // (4)  st_nlink: number of hard links
+                // (5)  st_uid: user ID of owner
+                // (6)  st_gid: group ID of owner
+                // (7)  st_size: total size, in bytes
+                // (8)  st_blksize: blocksize for file system I/O
+                // (9)  st_blocks: number of 512B blocks allocated
                 // (10) st_atime: time of last access
                 // (11) st_mtime: time of last modification
                 // (12) st_ctime: time of last status change
@@ -597,17 +597,48 @@ int ksh_help(char** args)
     char cwd[PATH_MAX];                 // cwd is the current working directory
     char* username = getenv("USER");    // get the username from the environment variable
     if (getcwd(cwd, sizeof(cwd)) == NULL) perror("ksh: getcwd failed...\n");
+    int num_builtins = ksh_num_builtins();
+    int columns = 4;
+    int width = 15;
 
-    printf("**********************************************************************\n");
-    printf("*                                                                    *\n");
-    printf("*                Welcome to Zheng Yunkun's First Shell!              *\n");
-    printf("*                                ksh                                 *\n");
-    printf("*                                                                    *\n");
-    printf("**********************************************************************\n\n");
+    printf("******************************************************************************\n");
+    printf("*                                                                            *\n");
+    printf("*                    Welcome to Zheng Yunkun's First Shell!                  *\n");
+    printf("*                                    ksh                                     *\n");
+    printf("*                                                                            *\n");
+    printf("******************************************************************************\n\n");
     printf("Type program names and arguments, and hit enter to execute.\n");
     printf("The following are built-in commands:\n\n");
 
-    for (int i = 1; i <= ksh_num_builtins(); i++) printf("  (%d)%s  \033[0;31m%-20s\033[0m\n", i, (i < 10) ? " " : "", builtin_str[i - 1]);
+    // for (int i = 1; i <= ksh_num_builtins(); i++) printf("  (%d)%s  \033[0;31m%-20s\033[0m\n", i, (i < 10) ? " " : "", builtin_str[i - 1]);
+
+    // Print top border of the table
+    printf("        +");
+    for (int i = 0; i < columns; i++) printf("---------------+");
+    printf("\n");
+    
+    // Print commands in table format
+    for (int i = 1; i <= num_builtins; i++) 
+    {
+        if (i % columns == 1) printf("        ");
+        printf("|  (%d)%s  \033[0;31m%-*s\033[0m", i, (i < 10) ? " " : "", width - 8, builtin_str[i - 1]);
+        if (i % columns == 0) 
+        {
+            printf("|\n        +");
+            for (int j = 0; j < columns; j++) printf("---------------+");
+            printf("\n");
+        }
+    }
+
+    // Print bottom border if the last row is not complete
+    if (num_builtins % columns != 0) 
+    {
+        for (int i = 0; i < columns - (num_builtins % columns); i++) printf("|               ");
+        printf("|\n        +");
+        for (int i = 0; i < columns; i++) printf("---------------+");
+        printf("\n");
+    }
+
 
     printf("\nUse the 'man' command for information on other programs.\n");
     printf("\nExamples:\n");
@@ -620,9 +651,9 @@ int ksh_help(char** args)
     printf("  - Use 'exit' to quit the shell.\n");
     printf("  - Use 'help' to see this message again.\n");
 
-    printf("\n**********************************************************************\n");
-    printf("*                              Bye-bye                               *\n");
-    printf("**********************************************************************\n");
+    printf("\n******************************************************************************\n");
+    printf("*                                  Bye-bye                                   *\n");
+    printf("******************************************************************************\n");
 
     return 1;
 }

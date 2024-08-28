@@ -111,7 +111,7 @@ char** ksh_split_line(char* line)
 }
 
 // 3. Execute the command (not built-in type)
-int ksh_launch(char** args) // args like ["ls", "-l"] or ["cd", "/Desktop"]
+int ksh_launch(char** args)
 {
     pid_t pid, wpid;    
     // pid is process id, wpid is wait process id
@@ -126,7 +126,7 @@ int ksh_launch(char** args) // args like ["ls", "-l"] or ["cd", "/Desktop"]
     // fork a child process
     if (pid == 0)
     {
-        if (execvp(args[0], args) == -1) perror("ksh: excvp failed...");
+        if (execvp(args[0], args) == -1) perror("ksh: excecution failed...");
         // execvp is used to set up a new program in the current process space
         // args[0] is the executable file name, args is the arguments
         // like execvp("ls", ["ls", "-l"]), then search "ls" in PATH ("/bin/ls") and execute it
