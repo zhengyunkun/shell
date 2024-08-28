@@ -15,6 +15,12 @@ make
 
 ### Enter the shell like
 
-![icon](src/shell.png)
+![icon](src/help.png)
 
-### More updates will follow...
+### Clean the shell
+
+```bash
+make clean
+```
+
+### More updates will follow
