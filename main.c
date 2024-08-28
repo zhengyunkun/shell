@@ -1,11 +1,3 @@
-/*
- * @author: Larry Kinn (Zheng Yunkun)
- * @date: 8/27/2024
- * @time: 18:18:00
- * @description: demo, a first simple shell program in C
- * @name: ksh (Kinn's Shell)
- */
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>

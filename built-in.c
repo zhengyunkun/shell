@@ -4,7 +4,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <linux/limits.h>
 #include <time.h>
 #include <pwd.h>
@@ -297,24 +299,300 @@ int ksh_mkdir(char** args)
 // 9. rmdir command
 int ksh_rmdir(char** args)
 {
+    if (args[1] == NULL) 
+    {
+        fprintf(stderr, "ksh: expected argument to \"rmdir\"\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Use rmdir to remove the specified directory
+    // If directory is not empty, rmdir will fail and return -1
+    // If directory is removed successfully, rmdir will return 0
+    if (rmdir(args[1]) != 0) 
+    {
+        perror("ksh: rmdir failed...");
+        exit(EXIT_FAILURE);
+    }
+
     return 1;
 }
 
-// 10. rm command
+// 10. rm command with four options: 
+// (1) -r remove directories and their contents recursively,
+// (2) -f remove files without prompting, which means remove files forcefully,
+// (3) -v remove files verbosely, which means print the name of each file before removing it,
+// (4) -i remove files interactively, which means prompt before every removal.
+int remove_directory(const char* path, int force, int verbose, int interactive)
+{
+    DIR* d = opendir(path);
+    size_t path_len = strlen(path);
+    int r = -1; // return value
+
+    // 1. Remove all the content in path
+    if (d)  // Open the directory
+    {
+        struct dirent* dir;
+        r = 0; // Initialize the return value
+        while (!r && (dir = readdir(d)))
+        // readdir reads all the items in the directory (依次读取所有的目录项)
+        {
+            int r2 = -1;
+            char* buf;
+            size_t len;
+
+            // Skip the "." and ".." directories
+            // "." is the current directory
+            // ".." is the parent directory
+            if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) continue;
+
+            len = path_len + strlen(dir->d_name) + 2;
+            // add '/' and '\0' to the length to store the full path
+            buf = malloc(len);
+
+            // If the memory allocation is successful
+            if (buf)
+            {
+                struct stat statbuf;
+                // stat struct is used to store the information of the file like:
+                // (1) st_dev: ID of device containing file
+                // (2) st_ino: inode number
+                // (3) st_mode: protection
+                // (4) st_nlink: number of hard links
+                // (5) st_uid: user ID of owner
+                // (6) st_gid: group ID of owner
+                // (7) st_size: total size, in bytes
+                // (8) st_blksize: blocksize for file system I/O
+                // (9) st_blocks: number of 512B blocks allocated
+                // (10) st_atime: time of last access
+                // (11) st_mtime: time of last modification
+                // (12) st_ctime: time of last status change
+
+                snprintf(buf, len, "%s/%s", path, dir->d_name);
+                // write the full path to the buffer
+                // * snprintf will automatically add a '\0' in the end of the string
+                // * so the former len is right
+
+                if (!stat(buf, &statbuf))
+                {
+                    // If the file is a directory, remove it recursively
+                    if (S_ISDIR(statbuf.st_mode))
+                    {
+                        r2 = remove_directory(buf, force, verbose, interactive);
+                        // call the remove_directory function recursively
+                        // to remove the directory and all its contents
+                    }
+                    else
+                    // If the file is a regular file
+                    {
+                        if (interactive)
+                        {
+                            int response;
+                            do
+                            {
+                                printf("rm: remove file '%s'? ", buf);
+                                response = getchar();
+                                while (getchar() != '\n');
+                                // Clear the input buffer, only keep the first character
+                            } while (response != 'Y' && response != 'y' && response != 'N' && response != 'n');
+
+                            if (response == 'N' || response == 'n')
+                            {
+                                // Skip the current file
+                                continue;
+                            }
+
+                            r2 = unlink(buf);
+                            // Delete the file
+                            if (verbose && r2 == 0) printf("removed file '%s'\n", buf);
+                        }
+                    }
+                }
+                free(buf);  
+            }
+            r = r2;
+        }
+        closedir(d);
+    }
+
+    // 2. Remove the directory itself
+    if (!r)
+    {
+        if (interactive)
+        {
+            int response;
+            do
+            {
+                printf("rm: remove file '%s'? ", path);
+                response = getchar();
+                while (getchar() != '\n');
+                // Clear the input buffer, only keep the first character
+            } while (response != 'Y' && response != 'y' && response != 'N' && response != 'n');
+        }
+        r = rmdir(path);
+        if (verbose && r == 0) printf("removed directory '%s'\n", path);
+    }
+
+    return r;
+}
+
 int ksh_rm(char** args)
 {
+    int recursive = 0;
+    int force = 0;
+    int verbose = 0;
+    int interactive = 0;
+    int i = 1;              
+    // Start from the first argument
+
+    // Parse the options
+    while (args[i] != NULL && args[i][0] == '-')
+    {
+        if (strcmp(args[i], "-r") == 0 || strcmp(args[i], "--recursive") == 0) recursive = 1;
+        else if (strcmp(args[i], "-f") == 0 || strcmp(args[i], "--force") == 0) force = 1;
+        else if (strcmp(args[i], "-v") == 0 || strcmp(args[i], "--verbose") == 0) verbose = 1;
+        else if (strcmp(args[i], "-i") == 0 || strcmp(args[i], "--interactive") == 0) interactive = 1;
+        else 
+        {
+            fprintf(stderr, "ksh: unknown option \'%s\'...\n", args[i]);
+            exit(EXIT_FAILURE);
+        }
+        i ++ ;
+    }
+
+    // Ensure whether there is at least one file or directory to remove
+    if (args[i] == NULL)
+    {
+        fprintf(stderr, "ksh: missing file or directory argument\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Remove all the provided files and directories
+    for (; args[i] != NULL; i ++ )
+    {
+        struct stat statbuf;
+        // Use statbuf to store the information of the file
+        if (stat(args[i], &statbuf) != 0)
+        // If get the information, return 0
+        // If not, return -1
+        {
+            if (!force)
+            {
+                perror("ksh: stat failed...");
+                exit(EXIT_FAILURE);
+            }
+            else continue;
+        }
+
+        // 1. If it's a directory
+        if (S_ISDIR(statbuf.st_mode))
+        {
+            if (recursive)
+            {
+                if (remove_directory(args[i], force, verbose, interactive) != 0)
+                {
+                    if (!force)
+                    {
+                        perror("ksh: remove_directory failed...");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+            else    
+            // If the file is a dir, but recursive option is not set
+            {
+                fprintf(stderr, "ksh: cannot remove \'%s\': Is a directory\n", args[i]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        // 2. If the file is a regular file
+        else
+        {
+            if (interactive)
+            {
+                int response;
+                do
+                {
+                    printf("rm: remove file '%s'? ", args[i]);
+                    response = getchar();
+                    while (getchar() != '\n');
+                    // Clear the input buffer, only keep the first character
+                } while (response != 'Y' && response != 'y' && response != 'N' && response != 'n');
+
+                if (response == 'N' || response == 'n')
+                {
+                    // Skip the current file
+                    continue;
+                }
+            }
+
+            // Use unlink to remove the file
+            if (unlink(args[i]) != 0)
+            {
+                if (!force)
+                {
+                    perror("ksh: unlink failed...");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else if (verbose) printf("removed '%s'\n", args[i]);
+        }
+    }
+
     return 1;
 }
 
 // 11. touch command
 int ksh_touch(char** args)
 {
+    if (args[1] == NULL) 
+    {
+        fprintf(stderr, "Usage: touch <file>\n");
+        exit(EXIT_FAILURE);
+    }
+
+    const char* filepath = args[1];
+
+    // Try to update the file times
+    // If the files does exist, update the access and modification time
+    if (utime(filepath, NULL) != 0)
+    {
+        // If the file does not exist, create it
+        int fd = open(filepath, O_CREAT | O_WRONLY, 0644);
+        if (fd < 0) 
+        {
+            perror("touch failed...");
+            exit(EXIT_FAILURE);
+        }
+        close(fd);
+    }
+
     return 1;
 }
 
 // 12. chmod command
 int ksh_chmod(char** args)
 {
+    if (args[1] == NULL || args[2] == NULL) 
+    {
+        fprintf(stderr, "Usage: chmod <mode> <file>\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Convert mode from string to octal
+    mode_t mode = strtol(args[1], NULL, 8);
+    if (mode == 0 && args[1][0] != '0') 
+    {
+        fprintf(stderr, "Invalid mode: %s\n", args[1]);
+        exit(EXIT_FAILURE);
+    }
+
+    // Change the file mode
+    if (chmod(args[2], mode) != 0) 
+    {
+        perror("chmod failed...\n");
+        exit(EXIT_FAILURE);
+    }
+
     return 1;
 }
 
