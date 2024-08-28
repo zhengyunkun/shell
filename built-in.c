@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <linux/limits.h>
 #include <time.h>
+#include <pwd.h>
+#include <grp.h>
 
 // List of built-in commands
 char* builtin_str[] = {
@@ -84,18 +86,23 @@ void print_file_info(const char* name, const struct stat* st) {
     printf((st->st_mode & S_IXOTH) ? "x" : "-");
 
     // (3) Print link count of the file
-    printf(" %ld", st->st_nlink);
+    printf(" %2ld", st->st_nlink);
 
-    // (4) Print file size in bytes
-    printf(" %ld", st->st_size);
+    // (4) Print file owner and group
+    struct passwd *pw = getpwuid(st->st_uid);
+    struct group  *gr = getgrgid(st->st_gid);
+    printf(" %-8s %-8s", pw->pw_name, gr->gr_name);
 
-    // (5) Print file modification time
+    // (5) Print file size in bytes
+    printf(" %10ld", st->st_size);
+
+    // (6) Print file modification time
     char timebuf[80];
     struct tm* timeinfo = localtime(&st->st_mtime);
     strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", timeinfo);
     printf(" %s", timebuf);
 
-    // (6) Print file name
+    // (7) Print file name
     printf(" %s\n", name);
 }
 
