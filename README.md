@@ -1,26 +1,20 @@
-# A Simple Shell in C
+# A Simple Shell in Rust
 
-## Install the shell
+## Install and use the shell
 
 ```bash
 cd /shell
-make
-```
-
-### Use the shell
-
-```bash
-./shell
+cargo run
 ```
 
 ### Enter the shell like
 
-![icon](src/help.png)
+![icon](pic/help.png)
 
 ### Clean the shell
 
 ```bash
-make clean
+cargo clean
 ```
 
 ### More updates will follow
