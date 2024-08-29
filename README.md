@@ -9,7 +9,7 @@ cargo run
 
 ### Enter the shell like
 
-![icon](pic/help.png)
+![icon](pic/rust-help.png)
 
 ### Clean the shell
 
